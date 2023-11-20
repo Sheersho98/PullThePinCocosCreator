@@ -19,15 +19,17 @@ export class GoldPool extends Component {
     public pool = new NodePool;
     public createGold;
     public hitGround: boolean;
+    public goldPieces: Node[] = [];
 
     initPool(){
         this.hitGround = false;
-        let initCount = 10;
+        let initCount = 14;
         
         for(let i=0; i<initCount; i++){
             this.createGold = instantiate(this.prefabGold);
+            //this.createGold.initPos(this.node);
             this.goldPoolHome.addChild(this.createGold);
-
+            this.goldPieces.push(this.createGold);
             // if(i == 0){
             //     this.goldPoolHome.addChild(this.createGold);
             // } else {
@@ -38,7 +40,7 @@ export class GoldPool extends Component {
     }
 
     reset(){
-        this.goldPoolHome.removeAllChildren();
+        this.goldPoolHome.destroyAllChildren();
         this.pool.clear();
         this.initPool();
     }

@@ -1,58 +1,69 @@
-import { _decorator, Component, Node, Contact2DType, Collider2D, IPhysics2DContact, director, input, Input, EventMouse, KeyCode, EventKeyboard, Collider, Vec2, UITransform, rect, Graphics, EventTouch, Prefab, Vec3, sys, game } from 'cc';
+import { _decorator, Component, Node, Contact2DType, Collider2D, IPhysics2DContact, director, input, Input, EventMouse, KeyCode, EventKeyboard, Collider, Vec2, UITransform, rect, Graphics, EventTouch, Prefab, sys, game, Button, AudioSource, SliderComponent, RigidBody2D, BoxCollider2D } from 'cc';
 const { ccclass, property } = _decorator;
 
 import { GoldPool } from './GoldPool';
-import { Pin } from './Pin';
-import { Pin_Vertical } from './Pin_Vertical';
+
 import { GameOver } from './GameOver';
+import { Pin_Diagonal } from './Pin_Diagonal';
+import { RockPool } from './RockPool';
+import { GameDistributionAd } from './GameDistributionAd';
+import { GameManager } from './GameManager';
 
 function randomIntFromInterval(min, max) { // min and max included 
     return Math.floor(Math.random() * (max - min + 1) + min)
 }
 
 @ccclass('GameController_level5')
-export class GameController_level5 extends Component {
+export class GameController_level3 extends Component {
     @property({
         type: GoldPool
     })
     public goldPile: GoldPool;
 
     @property({
-        type: Pin
+        type: RockPool
     })
-    public pinLeft: Pin;
-    @property({
-        type: Pin
-    })
-    public pinRight: Pin;
-    @property({
-        type: Pin_Vertical
-    })
-    public pinVertical: Pin_Vertical;
-
+    public rockPile: RockPool;
+    
     @property({
         type: Node
     })
-    public stone: Node;
-
-    @property({
-        type: Node
-    })
-    public dragon: Node;
+    public ground: Node;
 
     @property({
         type: GameOver
     })
     public lblGameOver: GameOver;
 
+    @property({
+        type: Pin_Diagonal
+    })
+    public pin_topLeft: Pin_Diagonal;
+    @property({
+        type: Pin_Diagonal
+    })
+    public pin_botLeft: Pin_Diagonal;
+    @property({
+        type: Pin_Diagonal
+    })
+    public pin_botRight: Pin_Diagonal;
+
+    @property({
+        type: AudioSource
+    })
+    public bgm: AudioSource;
+
+    @property({
+        type: SliderComponent
+    })
+    public volumeControl: SliderComponent;
+
+    
     public isOver: boolean;
     public isWin: boolean;
-    public isLose: boolean;
-
-    public initStonePos: Vec3;
-    public initDragonPos: Vec3;
 
     public nextLevel = randomIntFromInterval(1,5);
+    
 
     onLoad(){
         this.initListener();
@@ -67,37 +78,42 @@ export class GameController_level5 extends Component {
         //phone
         input.on(Input.EventType.TOUCH_START, this.onTouchStart, this);
     }
-
+    
     public clickLocation: Vec2;
     public touchLocation: Vec2;
+
+    public goldCollider: Collider2D;
 
     onMouseUp(event: EventMouse) {
         if (event.getButton() === 0 && !this.isOver) {
             console.log("CLICKED");
             this.clickLocation = event.getUILocation();
-            const pinLeftBox = this.pinLeft.getComponent(UITransform).getBoundingBoxToWorld();
-            const pinRightBox = this.pinRight.getComponent(UITransform).getBoundingBoxToWorld();
-            const pinVerticalBox = this.pinVertical.getComponent(UITransform).getBoundingBoxToWorld();
+            const pinTopLeftBox = this.pin_topLeft.getComponent(UITransform).getBoundingBox();
+            const pinBotLeftBox = this.pin_botLeft.getComponent(UITransform).getBoundingBox();
+            const pinBotRightBox = this.pin_botRight.getComponent(UITransform).getBoundingBox();
             //rect box = this.pin.getComponent(rect);
             
             //move pin
-            if(!this.pinVertical.isPulled && (pinVerticalBox.contains(this.clickLocation))){
+            if(!this.pin_topLeft.isPulled && (pinTopLeftBox.contains(this.clickLocation))){
 
-                console.log("CLICK VERTICAL PIN");
-                this.pinVertical.moveVerticalPin();
-                this.pinVertical.isPulled = true;
+                console.log("CLICK TOP LEFT PIN");
+                this.pin_topLeft.movePin();
+                this.pin_topLeft.isPulled = true;
 
-            } else if(this.pinVertical.isPulled && !this.pinRight.isPulled && !this.pinLeft.isPulled && (pinLeftBox.contains(this.clickLocation))){
+            } else if (!this.pin_botRight.isPulled && (pinBotRightBox.contains(this.clickLocation))){
 
-                console.log("CLICK LEFT PIN");
-                this.pinLeft.movePin();
-                this.pinLeft.isPulled = true;
+                console.log("CLICK BOT RIGHT PIN");
+                this.pin_botRight.movePin();
+                this.pin_botRight.isPulled = true;
+            } else if (!this.pin_botLeft.isPulled && (pinBotLeftBox.contains(this.clickLocation))){
 
-            } else if (this.pinVertical.isPulled && !this.pinLeft.isPulled && !this.pinRight.isPulled && (pinRightBox.contains(this.clickLocation))){
+                console.log("CLICK BOT LEFT PIN");
+                this.pin_botLeft.movePin();
+                this.pin_botLeft.isPulled = true;
+            }
 
-                console.log("CLICK RIGHT PIN");
-                this.pinRight.movePin();
-                this.pinRight.isPulled = true;
+            if(this.volumeControl.node.active){
+                this.volumeControl.node.active = false;
             }
         } 
     }
@@ -106,104 +122,107 @@ export class GameController_level5 extends Component {
         //const target = event.target as Node;
         //this.touchLocation = target.getPosition();
         this.touchLocation = event.getUILocation();
-        const pinLeftBox = this.pinLeft.getComponent(UITransform).getBoundingBoxToWorld();
-        const pinRightBox = this.pinRight.getComponent(UITransform).getBoundingBoxToWorld();
-        const pinVerticalBox = this.pinVertical.getComponent(UITransform).getBoundingBoxToWorld();
+        const pinTopLeftBox = this.pin_topLeft.getComponent(UITransform).getBoundingBoxToWorld();
+        const pinBotLeftBox = this.pin_botLeft.getComponent(UITransform).getBoundingBoxToWorld();
+        const pinBotRightBox = this.pin_botRight.getComponent(UITransform).getBoundingBoxToWorld();
 
         //move pin
-        if(!this.pinVertical.isPulled && (pinVerticalBox.contains(this.touchLocation))){
+        if(!this.pin_topLeft.isPulled && (pinTopLeftBox.contains(this.touchLocation))){
 
-            console.log("TOUCH VERTICAL PIN");
-            this.pinVertical.moveVerticalPin();
-            this.pinVertical.isPulled = true;
+            console.log("TOUCH TOP LEFT PIN");
+            this.pin_topLeft.movePin();
+            this.pin_topLeft.isPulled = true;
 
-        } else if(this.pinVertical.isPulled && !this.pinRight.isPulled && !this.pinLeft.isPulled && (pinLeftBox.contains(this.touchLocation))){
+        } else if (!this.pin_botRight.isPulled && (pinBotRightBox.contains(this.touchLocation))){
 
-            console.log("TOUCH LEFT PIN");
-            this.pinLeft.movePin();
-            this.pinLeft.isPulled = true;
+            console.log("TOUCH BOT RIGHT PIN");
+            this.pin_botRight.movePin();
+            this.pin_botRight.isPulled = true;
+        } else if (!this.pin_botLeft.isPulled && (pinBotLeftBox.contains(this.touchLocation))){
 
-        } else if (this.pinVertical.isPulled && !this.pinLeft.isPulled && !this.pinRight.isPulled && (pinRightBox.contains(this.touchLocation))){
+            console.log("TOUCH BOT LEFT PIN");
+            this.pin_botLeft.movePin();
+            this.pin_botLeft.isPulled = true;
+        }
 
-            console.log("TOUCH RIGHT PIN");
-            this.pinRight.movePin();
-            this.pinRight.isPulled = true;
+        if(this.volumeControl.node.active){
+            this.volumeControl.node.active = false;
         }
     }
-
+    
     startGame(){
         director.resume();
-        this.initStonePos = this.stone.getPosition();
-        this.initDragonPos = this.dragon.getPosition();
-        director.preloadScene("level"+this.nextLevel, function () {});
     }
 
     resetGame(){
         this.isOver = false;
-        this.isWin = false;
-        this.isLose = false;
         this.goldPile.reset();
-        this.pinLeft.resetPin();
-        this.pinRight.resetPin();
-        this.pinVertical.resetVerticalPin();
-        if(this.initStonePos != null && this.initDragonPos != null){
-            this.stone.setPosition(this.initStonePos);
-            this.dragon.setPosition(this.initDragonPos);
-        }
+        this.rockPile.reset();
+        this.pin_topLeft.resetPin();
+        this.pin_botLeft.resetPin();
+        this.pin_botRight.resetPin();
         this.lblGameOver.resetWinMidstPos();
         this.startGame();
     }
 
-    contactStone(){
-        let collider = this.stone.getComponent(Collider2D);
+    contactGround(){
+        let collider = this.ground.getComponent(Collider2D);
 
         if(collider){
-            collider.on(Contact2DType.BEGIN_CONTACT, this.onBeginContactWithStone, this);
+            collider.on(Contact2DType.BEGIN_CONTACT, this.onBeginContactWithGround, this);
         }
     }
 
-    contactDragon(){
-        let collider = this.dragon.getComponent(Collider2D);
-
-        if(collider){
-            collider.on(Contact2DType.BEGIN_CONTACT, this.onBeginContactWithDragon, this);
-        }
-    }
-
-    onBeginContactWithStone(selfCollider: Collider, otherCollider: Collider2D, contact: IPhysics2DContact | null){
+    contactRock(){
+        //let collider = this.rockPile.getComponent(Collider2D);
+        //let collider = this.rockPile.__prefab;
         
-        if(otherCollider.tag == 1){
-            this.isLose = true;
+
+        for(let i=0; i<this.rockPile.rocks.length; i++){
+            let rock = this.rockPile.rocks[i].getChildByName("imgRock");
+            //console.log(rock);
+            let collider = rock.getComponent(Collider2D);
+            if(collider){
+                collider.on(Contact2DType.BEGIN_CONTACT, this.onBeginContactWithRock, this);
+            }
         }
+        //console.log(this.rockPile.rockPoolHome.size());
     }
 
-    onBeginContactWithDragon(selfCollider: Collider, otherCollider: Collider2D, contact: IPhysics2DContact | null){
+    onBeginContactWithGround(selfCollider: Collider, otherCollider: Collider2D, contact: IPhysics2DContact | null){
         
         if(otherCollider.tag == 1){
             this.goldPile.hitGround = true;
         }
     }
 
-    goldOnDragonCheck(){
-        this.contactDragon();
+    onBeginContactWithRock(selfCollider: Collider, otherCollider: Collider2D, contact: IPhysics2DContact | null){
+        
+        if(otherCollider.tag == 1){
+            this.rockPile.hitGold = true;
+        } 
+    }
+
+    goldOnGroundCheck(){
+        this.contactGround();
 
         if(this.goldPile.hitGround){
             this.gameWon();
         }
     }
 
-    goldOnStoneCheck(){
-        this.contactStone();
+    goldOnRockCheck(){
+        this.contactRock();
 
-        if(this.isLose){
+        if(this.rockPile.hitGold){
             this.gameLoss();
         }
     }
 
     update(){
         if(!this.isOver){
-            this.goldOnDragonCheck();
-            this.goldOnStoneCheck();
+            this.goldOnRockCheck();
+            this.goldOnGroundCheck();
         }
     }
 
@@ -213,6 +232,8 @@ export class GameController_level5 extends Component {
         this.lblGameOver.name = "win";
 
         this.scheduleOnce(function() {
+            // Here this refers to component
+            //director.pause();
             this.lblGameOver.node.active = true;
             this.lblGameOver.loadWin();
         }, 2);   
@@ -220,26 +241,38 @@ export class GameController_level5 extends Component {
 
     gameLoss(){
         this.isOver = true;
-        this.lblGameOver.name = "lose";
+        this.lblGameOver.name = "loss";
 
         this.scheduleOnce(function() {
             // Here this refers to component
             this.lblGameOver.node.active = true;
             this.lblGameOver.loadLose();
-        }, 2); 
+        }, 2);   
+    }
+
+    showAd(){
+        this.bgm.volume = 0;
+        //this.gdAd.GDShowAd();
+        //this.loadNextLevel();
+        //director.pause();
+    }
+
+    pause(){
+        director.pause();
+    }
+
+    resume(){
+        director.resume();
     }
 
     loadNextLevel(){
+        //game.resume();
         if(this.lblGameOver.name == "win"){
-            director.resume();
-            //this.lblGameOver.hideGameWon();
-            this.lblGameOver.node.active = false;
-            director.loadScene("level"+this.nextLevel);
-        } else {
-            this.lblGameOver.node.active = false;
-            this.resetGame();
-        }
-        
+            GameManager.gameManagerInstance.isWin = true;
+        } 
+        this.lblGameOver.node.active = false;
+        this.node.getParent().destroyAllChildren();
+        GameManager.gameManagerInstance.showAd();
     }
     quitGame(){
         if (sys.isNative) {
@@ -252,6 +285,17 @@ export class GameController_level5 extends Component {
             // For example, in a web game, you can redirect the player to your website's homepage.
             window.location.href = 'https://www.example.com';
         }
+    }
+    toggleVolumeSlider(){
+        if(!this.volumeControl.node.active){
+            this.volumeControl.node.active = true;
+        } else {
+            this.volumeControl.node.active = false;
+        }
+    }
+
+    adjustVolume(){
+        this.bgm.volume = this.volumeControl.progress;
     }
 }
 

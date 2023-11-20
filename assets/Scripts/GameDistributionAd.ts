@@ -1,18 +1,23 @@
-import { _decorator, Component, Node } from 'cc';
+import { _decorator, Component, director, game, Node, Script } from 'cc';
+import { GameManager } from './GameManager';
 const { ccclass, property } = _decorator;
 
 @ccclass('GameDistributionAd')
 export class GameDistributionAd extends Component {
+
     onLoad(){
         window["GD_OPTIONS"] = {
-            "gameId": "[YOUR GD GAME ID HERE]",
+            "gameId": "f983a5bbc32e45129298c271543f3bd9",
             "onEvent": function(event) {
                 switch (event.name) {
                     case "SDK_GAME_START":
                         // advertisement done, resume game logic and unmute audio
+                        //game.resume();
+                        director.getScene().getChildByName("GameManager").getComponent(GameManager).loadNextLevel();
                         break;
                     case "SDK_GAME_PAUSE":
                         // pause game logic / mute audio
+                        director.getScene().getChildByName("GameManager").pauseSystemEvents(true);
                         break;
                     case "SDK_GDPR_TRACKING":
                         // this event is triggered when your user doesn't want to be tracked
@@ -22,6 +27,9 @@ export class GameDistributionAd extends Component {
                         break;
                     case "SDK_REWARDED_WATCH_COMPLETE":
                         // this event is triggered when your user completely watched rewarded ad
+                        break;
+                    case "CONTENT_RESUME_REQUESTED":
+                        //game.resume();
                         break;
                 }
             },
@@ -35,10 +43,14 @@ export class GameDistributionAd extends Component {
             fjs.parentNode.insertBefore(js, fjs);
         }(document, 'script', 'gamedistribution-jssdk'));
     }
-
-    GDShowAd(){
-        if (typeof gdsk !== 'undefined' && gdsdk.showAd !== 'undefined') {
-            gdsdk.showAd();
+    public GDShowAd() {
+        console.log("GDSDK",window.gdsdk);
+        if (typeof gdsdk !== 'undefined' && gdsdk.showBanner) {
+            console.log("ad show");
+            gdsdk.showBanner();
+        }
+        else {
+            console.error("GameDistribution SDK not initialized or showAd function not available.");
         }
     }
 }

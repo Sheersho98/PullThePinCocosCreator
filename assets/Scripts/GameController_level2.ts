@@ -1,13 +1,15 @@
-import { _decorator, Component, Node, Contact2DType, Collider2D, IPhysics2DContact, director, input, Input, EventMouse, KeyCode, EventKeyboard, Collider, Vec2, UITransform, rect, Graphics, EventTouch, sys, game } from 'cc';
+import { _decorator, Component, Node, Contact2DType, Collider2D, IPhysics2DContact, director, input, Input, EventMouse, KeyCode, EventKeyboard, Collider, Vec2, UITransform, rect, Graphics, EventTouch, sys, game, Button, AudioSource, SliderComponent } from 'cc';
 const { ccclass, property } = _decorator;
 
 import { GoldPool } from './GoldPool';
 import { Pin } from './Pin';
 import { Pin_Vertical } from './Pin_Vertical';
 import { GameOver } from './GameOver';
+import { GameDistributionAd } from './GameDistributionAd';
+import { GameManager } from './GameManager';
 
-@ccclass('GameController_level2')
-export class GameController_level2 extends Component {
+@ccclass('GameController')
+export class GameController extends Component {
     @property({
         type: GoldPool
     })
@@ -28,6 +30,17 @@ export class GameController_level2 extends Component {
         type: GameOver
     })
     public lblGameOver: GameOver;
+
+
+    @property({
+        type: AudioSource
+    })
+    public bgm: AudioSource;
+
+    @property({
+        type: SliderComponent
+    })
+    public volumeControl: SliderComponent;
 
     public isOver: boolean;
     public isWin: boolean;
@@ -95,6 +108,10 @@ export class GameController_level2 extends Component {
                 this.gameOver();
 
             }
+
+            if(this.volumeControl.node.active){
+                this.volumeControl.node.active = false;
+            }
         }
     }
 
@@ -121,7 +138,11 @@ export class GameController_level2 extends Component {
             this.lblGameOver.name = "win";
             this.gameOver();
 
-        } 
+        }
+
+        if(this.volumeControl.node.active){
+            this.volumeControl.node.active = false;
+        }
         // else if (this.isWin){
         //     director.resume();
         //     this.lblGameOver.hideGameWon();
@@ -133,7 +154,6 @@ export class GameController_level2 extends Component {
 
     startGame(){
         director.resume();
-        director.preloadScene("level3", function () {});
     }
 
     resetGame(){
@@ -157,17 +177,22 @@ export class GameController_level2 extends Component {
     }
 
     loadNextLevel(){
+        //game.resume();
         if(this.lblGameOver.name == "win"){
-            director.resume();
-            //this.lblGameOver.hideGameWon();
-            this.lblGameOver.node.active = false;
-            director.loadScene("level3");
-        } else {
-            this.lblGameOver.node.active = false;
-            this.resetGame();
-        }
-        
+            GameManager.gameManagerInstance.isWin = true;
+        } 
+        this.lblGameOver.node.active = false;
+        this.node.getParent().destroyAllChildren();
+        GameManager.gameManagerInstance.showAd();
     }
+
+    showAd(){
+        this.bgm.volume = 0;
+        //this.gdAd.GDShowAd();
+        //this.loadNextLevel();
+        //director.pause();
+    }
+    
     quitGame(){
         if (sys.isNative) {
             // If the game is running on a native platform (e.g., mobile or desktop),
@@ -179,6 +204,17 @@ export class GameController_level2 extends Component {
             // For example, in a web game, you can redirect the player to your website's homepage.
             window.location.href = 'https://www.example.com';
         }
+    }
+    toggleVolumeSlider(){
+        if(!this.volumeControl.node.active){
+            this.volumeControl.node.active = true;
+        } else {
+            this.volumeControl.node.active = false;
+        }
+    }
+
+    adjustVolume(){
+        this.bgm.volume = this.volumeControl.progress;
     }
 }
 

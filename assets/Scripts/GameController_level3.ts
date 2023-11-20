@@ -1,28 +1,28 @@
-import { _decorator, Component, Node, Contact2DType, Collider2D, IPhysics2DContact, director, input, Input, EventMouse, KeyCode, EventKeyboard, Collider, Vec2, UITransform, rect, Graphics, EventTouch, Prefab, sys, game } from 'cc';
+import { _decorator, Component, Node, Contact2DType, Collider2D, IPhysics2DContact, director, input, Input, EventMouse, KeyCode, EventKeyboard, Collider, Vec2, UITransform, rect, Graphics, EventTouch, Prefab, sys, game, Button, AudioSource, SliderComponent } from 'cc';
 const { ccclass, property } = _decorator;
 
 import { GoldPool } from './GoldPool';
 
 import { GameOver } from './GameOver';
 import { Pin_Diagonal } from './Pin_Diagonal';
-import { RockPool } from './RockPool';
+import { GameDistributionAd } from './GameDistributionAd';
+import { GameManager } from './GameManager';
 
 @ccclass('GameController_level3')
-export class GameController_level3 extends Component {
+export class GameController_level4 extends Component {
     @property({
         type: GoldPool
     })
     public goldPile: GoldPool;
 
     @property({
-        type: RockPool
+        type: Node
     })
-    public rockPile: RockPool;
-    
+    public groundLeft: Node;
     @property({
         type: Node
     })
-    public ground: Node;
+    public groundRight: Node;
 
     @property({
         type: GameOver
@@ -32,20 +32,25 @@ export class GameController_level3 extends Component {
     @property({
         type: Pin_Diagonal
     })
-    public pin_topLeft: Pin_Diagonal;
+    public pinLeft: Pin_Diagonal;
     @property({
         type: Pin_Diagonal
     })
-    public pin_botLeft: Pin_Diagonal;
-    @property({
-        type: Pin_Diagonal
-    })
-    public pin_botRight: Pin_Diagonal;
+    public pinRight: Pin_Diagonal;
 
+    @property({
+        type: AudioSource
+    })
+    public bgm: AudioSource;
+
+    @property({
+        type: SliderComponent
+    })
+    public volumeControl: SliderComponent;
     
     public isOver: boolean;
     public isWin: boolean;
-    
+    public isLose: boolean;
 
     onLoad(){
         this.initListener();
@@ -60,38 +65,34 @@ export class GameController_level3 extends Component {
         //phone
         input.on(Input.EventType.TOUCH_START, this.onTouchStart, this);
     }
-    
+
     public clickLocation: Vec2;
     public touchLocation: Vec2;
-
-    public goldCollider: Collider2D;
 
     onMouseUp(event: EventMouse) {
         if (event.getButton() === 0 && !this.isOver) {
             console.log("CLICKED");
             this.clickLocation = event.getUILocation();
-            const pinTopLeftBox = this.pin_topLeft.getComponent(UITransform).getBoundingBoxToWorld();
-            const pinBotLeftBox = this.pin_botLeft.getComponent(UITransform).getBoundingBoxToWorld();
-            const pinBotRightBox = this.pin_botRight.getComponent(UITransform).getBoundingBoxToWorld();
+            const pinLeftBox = this.pinLeft.getComponent(UITransform).getBoundingBoxToWorld();
+            const pinRightBox = this.pinRight.getComponent(UITransform).getBoundingBoxToWorld();
             //rect box = this.pin.getComponent(rect);
             
             //move pin
-            if(!this.pin_topLeft.isPulled && (pinTopLeftBox.contains(this.clickLocation))){
+            if(!this.pinRight.isPulled && (pinRightBox.contains(this.clickLocation))){
 
-                console.log("CLICK TOP LEFT PIN");
-                this.pin_topLeft.movePin();
-                this.pin_topLeft.isPulled = true;
+                console.log("CLICK RIGHT PIN");
+                this.pinRight.movePin();
+                this.pinRight.isPulled = true;
 
-            } else if (!this.pin_botRight.isPulled && (pinBotRightBox.contains(this.clickLocation))){
+            } else if (!this.pinLeft.isPulled && (pinLeftBox.contains(this.clickLocation))){
 
-                console.log("CLICK BOT RIGHT PIN");
-                this.pin_botRight.movePin();
-                this.pin_botRight.isPulled = true;
-            } else if (!this.pin_botLeft.isPulled && (pinBotLeftBox.contains(this.clickLocation))){
+                console.log("CLICK LEFT PIN");
+                this.pinLeft.movePin();
+                this.pinLeft.isPulled = true;
+            }
 
-                console.log("CLICK BOT LEFT PIN");
-                this.pin_botLeft.movePin();
-                this.pin_botLeft.isPulled = true;
+            if(this.volumeControl.node.active){
+                this.volumeControl.node.active = false;
             }
         } 
     }
@@ -100,104 +101,93 @@ export class GameController_level3 extends Component {
         //const target = event.target as Node;
         //this.touchLocation = target.getPosition();
         this.touchLocation = event.getUILocation();
-        const pinTopLeftBox = this.pin_topLeft.getComponent(UITransform).getBoundingBoxToWorld();
-        const pinBotLeftBox = this.pin_botLeft.getComponent(UITransform).getBoundingBoxToWorld();
-        const pinBotRightBox = this.pin_botRight.getComponent(UITransform).getBoundingBoxToWorld();
+        const pinLeftBox = this.pinLeft.getComponent(UITransform).getBoundingBoxToWorld();
+        const pinRightBox = this.pinRight.getComponent(UITransform).getBoundingBoxToWorld();
 
         //move pin
-        if(!this.pin_topLeft.isPulled && (pinTopLeftBox.contains(this.touchLocation))){
+        if(!this.pinRight.isPulled && (pinRightBox.contains(this.touchLocation))){
 
-            console.log("TOUCH TOP LEFT PIN");
-            this.pin_topLeft.movePin();
-            this.pin_topLeft.isPulled = true;
+            console.log("TOUCH RIGHT PIN");
+            this.pinRight.movePin();
+            this.pinRight.isPulled = true;
 
-        } else if (!this.pin_botRight.isPulled && (pinBotRightBox.contains(this.touchLocation))){
+        } else if (!this.pinLeft.isPulled && (pinLeftBox.contains(this.touchLocation))){
 
-            console.log("TOUCH BOT RIGHT PIN");
-            this.pin_botRight.movePin();
-            this.pin_botRight.isPulled = true;
-        } else if (!this.pin_botLeft.isPulled && (pinBotLeftBox.contains(this.touchLocation))){
+            console.log("TOUCH LEFT PIN");
+            this.pinLeft.movePin();
+            this.pinLeft.isPulled = true;
+        }
 
-            console.log("TOUCH BOT LEFT PIN");
-            this.pin_botLeft.movePin();
-            this.pin_botLeft.isPulled = true;
+        if(this.volumeControl.node.active){
+            this.volumeControl.node.active = false;
         }
     }
-    
+
     startGame(){
         director.resume();
-        director.preloadScene("level4", function () {});
     }
 
     resetGame(){
         this.isOver = false;
+        this.isWin = false;
+        this.isLose = false;
         this.goldPile.reset();
-        this.rockPile.reset();
-        this.pin_topLeft.resetPin();
-        this.pin_botLeft.resetPin();
-        this.pin_botRight.resetPin();
+        this.pinLeft.resetPin();
+        this.pinRight.resetPin();
         this.lblGameOver.resetWinMidstPos();
         this.startGame();
     }
 
-    contactGround(){
-        let collider = this.ground.getComponent(Collider2D);
+    contactLeftGround(){
+        let collider = this.groundLeft.getComponent(Collider2D);
 
         if(collider){
-            collider.on(Contact2DType.BEGIN_CONTACT, this.onBeginContactWithGround, this);
+            collider.on(Contact2DType.BEGIN_CONTACT, this.onBeginContactWithLeftGround, this);
         }
     }
 
-    contactRock(){
-        //let collider = this.rockPile.getComponent(Collider2D);
-        //let collider = this.rockPile.__prefab;
+    contactRightGround(){
+        let collider = this.groundRight.getComponent(Collider2D);
+
+        if(collider){
+            collider.on(Contact2DType.BEGIN_CONTACT, this.onBeginContactWithRightGround, this);
+        }
+    }
+
+    onBeginContactWithLeftGround(selfCollider: Collider, otherCollider: Collider2D, contact: IPhysics2DContact | null){
         
-
-        for(let i=0; i<this.rockPile.rocks.length; i++){
-            let rock = this.rockPile.rocks[i].getChildByName("imgRock");
-            //console.log(rock);
-            let collider = rock.getComponent(Collider2D);
-            if(collider){
-                collider.on(Contact2DType.BEGIN_CONTACT, this.onBeginContactWithRock, this);
-            }
+        if(otherCollider.tag == 1){
+            this.isLose = true;
         }
-        //console.log(this.rockPile.rockPoolHome.size());
     }
 
-    onBeginContactWithGround(selfCollider: Collider, otherCollider: Collider2D, contact: IPhysics2DContact | null){
+    onBeginContactWithRightGround(selfCollider: Collider, otherCollider: Collider2D, contact: IPhysics2DContact | null){
         
         if(otherCollider.tag == 1){
             this.goldPile.hitGround = true;
         }
     }
 
-    onBeginContactWithRock(selfCollider: Collider, otherCollider: Collider2D, contact: IPhysics2DContact | null){
-        
-        if(otherCollider.tag == 1){
-            this.rockPile.hitGold = true;
-        } 
-    }
-
-    goldOnGroundCheck(){
-        this.contactGround();
+    goldOnRightGroundCheck(){
+        this.contactRightGround();
 
         if(this.goldPile.hitGround){
             this.gameWon();
         }
     }
 
-    goldOnRockCheck(){
-        this.contactRock();
+    goldOnLeftGroundCheck(){
+        this.contactLeftGround();
 
-        if(this.rockPile.hitGold){
+        if(this.isLose){
             this.gameLoss();
         }
     }
 
     update(){
         if(!this.isOver){
-            this.goldOnRockCheck();
-            this.goldOnGroundCheck();
+            this.goldOnRightGroundCheck();
+            this.goldOnLeftGroundCheck();
         }
     }
 
@@ -208,7 +198,6 @@ export class GameController_level3 extends Component {
 
         this.scheduleOnce(function() {
             // Here this refers to component
-            //director.pause();
             this.lblGameOver.node.active = true;
             this.lblGameOver.loadWin();
         }, 2);   
@@ -216,7 +205,7 @@ export class GameController_level3 extends Component {
 
     gameLoss(){
         this.isOver = true;
-        this.lblGameOver.name = "loss";
+        this.lblGameOver.name = "lose";
 
         this.scheduleOnce(function() {
             // Here this refers to component
@@ -226,17 +215,22 @@ export class GameController_level3 extends Component {
     }
 
     loadNextLevel(){
+        //game.resume();
         if(this.lblGameOver.name == "win"){
-            director.resume();
-            //this.lblGameOver.hideGameWon();
-            this.lblGameOver.node.active = false;
-            director.loadScene("level4");
-        } else {
-            this.lblGameOver.node.active = false;
-            this.resetGame();
-        }
-        
+            GameManager.gameManagerInstance.isWin = true;
+        } 
+        this.lblGameOver.node.active = false;
+        this.node.getParent().destroyAllChildren();
+        GameManager.gameManagerInstance.showAd();
     }
+
+    showAd(){
+        this.bgm.volume = 0;
+        //this.gdAd.GDShowAd();
+        //this.loadNextLevel();
+        //director.pause();
+    }
+
     quitGame(){
         if (sys.isNative) {
             // If the game is running on a native platform (e.g., mobile or desktop),
@@ -248,6 +242,17 @@ export class GameController_level3 extends Component {
             // For example, in a web game, you can redirect the player to your website's homepage.
             window.location.href = 'https://www.example.com';
         }
+    }
+    toggleVolumeSlider(){
+        if(!this.volumeControl.node.active){
+            this.volumeControl.node.active = true;
+        } else {
+            this.volumeControl.node.active = false;
+        }
+    }
+
+    adjustVolume(){
+        this.bgm.volume = this.volumeControl.progress;
     }
 }
 
